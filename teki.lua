@@ -1,5 +1,5 @@
 -- ==========================================
--- SCRIPT TIKI HUB (MAIN SOURCE - FIX UI & BOTTOM LEFT BUTTON)
+-- SCRIPT TIKI HUB (MAIN SOURCE - ZINDEX LAYER FIX)
 -- ==========================================
 
 ----------------------------------------------------------------------
@@ -79,6 +79,7 @@ local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "TikiHubGUI"
 screenGui.ResetOnSpawn = false
 screenGui.DisplayOrder = 999999999 
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global -- Kích hoạt mode phân lớp Global
 screenGui.Enabled = EnableStatus
 screenGui.Parent = playerGui
 
@@ -91,15 +92,16 @@ textFrame.BackgroundTransparency = 1
 textFrame.Parent = screenGui
 
 ----------------------------------------------------------------------
--- ĐIỀU CHỈNH NÚT TẮT BẬT (GÓC TRÁI DƯỚI CÙNG, TO HƠN, ĐỀU CẠNH)
+-- ĐIỀU CHỈNH NÚT TẮT BẬT (GÓC TRÁI DƯỚI CÙNG, TO HƠN, LỚP CAO NHẤT)
 ----------------------------------------------------------------------
 local toggleBtn = Instance.new("ImageButton")
 toggleBtn.Name = "ToggleMenu"
-toggleBtn.Size = UDim2.new(0, 65, 0, 65) -- Nút to hơn 1 tí (từ 50 lên 65)
-toggleBtn.Position = UDim2.new(0, 20, 1, -20) -- Góc trái dưới cùng, cách đều 2 cạnh 20px
-toggleBtn.AnchorPoint = Vector2.new(0, 1) -- Đặt điểm neo ở góc dưới cùng bên trái của ảnh
+toggleBtn.Size = UDim2.new(0, 65, 0, 65) 
+toggleBtn.Position = UDim2.new(0, 20, 1, -20) 
+toggleBtn.AnchorPoint = Vector2.new(0, 1) 
 toggleBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 toggleBtn.Image = "rbxassetid://105244195609414" 
+toggleBtn.ZIndex = 999999 -- Nâng lớp lên cao nhất để không bao giờ bị đè
 toggleBtn.Parent = screenGui
 
 local corner = Instance.new("UICorner")
