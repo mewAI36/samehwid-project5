@@ -1,5 +1,5 @@
 -- ==========================================
--- SCRIPT TIKI HUB (MAIN SOURCE - ZINDEX LAYER FIX)
+-- SCRIPT TIKI HUB (MAIN SOURCE - FIX ZINDEX & SMART TIMER)
 -- ==========================================
 
 ----------------------------------------------------------------------
@@ -223,8 +223,8 @@ task.spawn(function()
 	local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 	character:WaitForChild("HumanoidRootPart", 999)
 	
-	-- 1. BẮT ĐẦU ĐẾM GIỜ CHẠY NGẦM
-	local startTick = tick() 
+	-- 1. CHUẨN BỊ BỘ ĐẾM (Chưa chạy ngay, đợi hết Loading)
+	local startTick = nil 
 	
 	local heartbeatConnection = runService.Heartbeat:Connect(function()
 		if not timer or not timer.Parent then
@@ -232,8 +232,13 @@ task.spawn(function()
 			return
 		end
 		
-		local elapsed = tick() - startTick
-		timer.Text = formatTimer(elapsed) .. " (v1.0b)"
+		local elapsed = 0
+		if startTick then
+			elapsed = tick() - startTick
+			timer.Text = formatTimer(elapsed) .. " (v1.0b)"
+		else
+			timer.Text = "0 Hours, 0 Minutes, 0 Seconds (v1.0b)"
+		end
 		
 		local currentMap = "N/A"
 		local currentDiff = "N/A"
@@ -250,8 +255,8 @@ task.spawn(function()
 				currentDiff = getgenv().TCFG.AutoStartDifficulty or "N/A"
 			end
 			
-			-- Kiểm tra Auto Return (Kick hoặc Teleport)
-			if MinuteReturnLobby > 0 and elapsed > (MinuteReturnLobby * 60) and not isReturning then
+			-- Chỉ kiểm tra Auto Return khi đồng hồ đã bắt đầu tính giờ
+			if startTick and MinuteReturnLobby > 0 and elapsed > (MinuteReturnLobby * 60) and not isReturning then
 				isReturning = true
 				task.spawn(function()
 					if MethodReturn == "Kick" then
@@ -300,8 +305,11 @@ task.spawn(function()
 	if checkIsLoading() then isLoadingServer = true end
 	while checkIsLoading() do task.wait(0.5) end
 	isLoadingServer = false 
+	
+	-- 4. BẮT ĐẦU ĐẾM GIỜ (SAU KHI LOADING HOÀN TOÀN BIẾN MẤT)
+	startTick = tick()
 
-	-- 4. LUỒNG 1: ĐỢI 2S VÀ ĐỌC DATA Ở LOBBY
+	-- 5. LUỒNG 1: ĐỢI 2S VÀ ĐỌC DATA Ở LOBBY
 	if isLobby then
 		task.wait(2)
 		
@@ -354,7 +362,7 @@ task.spawn(function()
 
 	updateStatsUI()
 
-	-- 5. LUỒNG 2: KIỂM TRA BẢNG COMPLETED (Để chuyển Status qua ReStarting)
+	-- 6. LUỒNG 2: KIỂM TRA BẢNG COMPLETED (Để chuyển Status qua ReStarting)
 	local cachedEndScreen = nil 
 	task.spawn(function()
 		while task.wait(1) do
