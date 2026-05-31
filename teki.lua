@@ -298,7 +298,7 @@ task.spawn(function()
 
 	-- 4. LUỒNG 1: ĐỢI 2S VÀ ĐỌC DATA Ở LOBBY
 	if isLobby then
-		task.wait(2)
+		task.wait(4)
 		
 		local HUD = Interface:FindFirstChild("Gear_Up") and Interface.Gear_Up:FindFirstChild("HUD")
 		local LevelTitle = HUD and HUD:FindFirstChild("Level") and HUD.Level:FindFirstChild("Title")
