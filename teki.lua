@@ -1,5 +1,9 @@
+-- ==========================================
+-- SCRIPT TIKI HUB (MAIN SOURCE - KICK / TELEPORT METHOD)
+-- ==========================================
+
 ----------------------------------------------------------------------
--- THÊM PHẦN LUARMOR KEY LOADER 
+-- 1. CHẠY LUARMOR LOADER TRƯỚC TIÊN
 ----------------------------------------------------------------------
 local function k()
 	return table.concat({
@@ -26,15 +30,19 @@ if getgenv().Version == "Premium" then
 elseif getgenv().Version == "Tester" then
 	run("https://api.luarmor.net/files/v4/loaders/3218f6d499bb0f738c70c5532b848d9a.lua")
 end
--- ==========================================
--- SCRIPT TIKI HUB (MAIN SOURCE - CLEAN)
--- ==========================================
--- Tự động nhận diện Config từ Loader, nếu không có thì xài mặc định
+
+----------------------------------------------------------------------
+-- 2. CẤU HÌNH CỦA TIKI HUB (USER CONFIG)
+----------------------------------------------------------------------
 getgenv().Config = getgenv().Config or {}
 local EnableStatus = getgenv().Config.EnableStatus
 if EnableStatus == nil then EnableStatus = true end
 local MinuteReturnLobby = getgenv().Config.MinuteReturnLobby or 3
+local MethodReturn = getgenv().Config.MethodReturn or "Teleport" -- Chọn "Teleport" hoặc "Kick"
 
+----------------------------------------------------------------------
+-- 3. BẮT ĐẦU CHẠY CÁC CHỨC NĂNG CHÍNH
+----------------------------------------------------------------------
 local Players = game:GetService("Players")
 local runService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
@@ -187,7 +195,7 @@ local currentLevel, currentPrestige, currentGold, currentGems = 0, 0, 0, 0
 local isShadowbanned = false
 local isRestartingMatch = false 
 local isLoadingServer = false 
-local isTeleporting = false
+local isReturning = false
 
 local function updateStatsUI()
 	stats1.Text = string.format("Level: %d | Gold: %s", currentLevel, formatKMB(currentGold))
@@ -234,13 +242,17 @@ task.spawn(function()
 				currentDiff = getgenv().TCFG.AutoStartDifficulty or "N/A"
 			end
 			
-			-- Kiểm tra Auto Teleport
-			if MinuteReturnLobby > 0 and elapsed > (MinuteReturnLobby * 60) and not isTeleporting then
-				isTeleporting = true
+			-- Kiểm tra Auto Return (Kick hoặc Teleport)
+			if MinuteReturnLobby > 0 and elapsed > (MinuteReturnLobby * 60) and not isReturning then
+				isReturning = true
 				task.spawn(function()
-					pcall(function() TeleportService:Teleport(mainLobbyId, LocalPlayer) end)
-					task.wait(10) 
-					isTeleporting = false
+					if MethodReturn == "Kick" then
+						LocalPlayer:Kick("Tiki Hub: Đã quá thời gian an toàn (" .. MinuteReturnLobby .. " phút). Tự động Kick để chống kẹt!")
+					else
+						pcall(function() TeleportService:Teleport(mainLobbyId, LocalPlayer) end)
+						task.wait(10) 
+						isReturning = false
+					end
 				end)
 			end
 		end
@@ -248,8 +260,8 @@ task.spawn(function()
 		settings.Text = string.format("M: %s | D: %s", currentMap, currentDiff)
 
 		-- Chữ Status
-		if isTeleporting then
-			objective.Text = "Status: Teleporting..."
+		if isReturning then
+			objective.Text = MethodReturn == "Kick" and "Status: Kicking..." or "Status: Teleporting..."
 		elseif isLoadingServer then
 			objective.Text = "Status: Waitting Server"
 		elseif isRestartingMatch then
@@ -283,7 +295,6 @@ task.spawn(function()
 
 	-- 4. LUỒNG 1: ĐỢI 2S VÀ ĐỌC DATA Ở LOBBY
 	if isLobby then
-		-- ĐÚNG NHƯ BẠN YÊU CẦU: Khựng lại 2s trước khi quét UI
 		task.wait(2)
 		
 		local HUD = Interface:FindFirstChild("Gear_Up") and Interface.Gear_Up:FindFirstChild("HUD")
@@ -361,6 +372,3 @@ task.spawn(function()
 	end)
 end)
 
--- ==========================================
--- KẾT THÚC SCRIPT
--- ==========================================
