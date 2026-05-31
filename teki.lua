@@ -1,5 +1,5 @@
 -- ==========================================
--- SCRIPT TIKI HUB (MAIN SOURCE)
+-- SCRIPT TIKI HUB (MAIN SOURCE - CLEAN)
 -- ==========================================
 -- Tự động nhận diện Config từ Loader, nếu không có thì xài mặc định
 getgenv().Config = getgenv().Config or {}
@@ -57,7 +57,7 @@ toggleBtn.Size = UDim2.new(0, 50, 0, 50)
 toggleBtn.Position = UDim2.new(1, -15, 0, 15) 
 toggleBtn.AnchorPoint = Vector2.new(1, 0) 
 toggleBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-toggleBtn.Image = "rbxassetid://105244195609414" 
+toggleBtn.Image = "rbxassetid://100022274" 
 toggleBtn.Parent = screenGui
 
 local corner = Instance.new("UICorner")
@@ -96,28 +96,18 @@ end
 
 local lobbyName = lobbyIds[game.PlaceId]
 local isLobby = (lobbyName ~= nil)
-local isRestartingMatch = false 
-
-local initStatus = isLobby and "Status: Starting" or "Status: Attacking Titans"
-local initialMap = isLobby and lobbyName or "N/A"
-local initialDiff = "N/A"
-
-if not isLobby and type(_G.TCFG) == "table" then
-	initialMap = _G.TCFG.AutoStartMap or "N/A"
-	initialDiff = _G.TCFG.AutoStartDifficulty or "N/A"
-end
 
 local title = createTextLabel("Title", "Tiki Hub", titleColor, 0.15, 36)
 title.Parent = textFrame
-local objective = createTextLabel("Objective", initStatus, objectiveColor, 0.25, 24)
+local objective = createTextLabel("Objective", "Status: ...", objectiveColor, 0.25, 24)
 objective.Parent = textFrame
-local timer = createTextLabel("Timer", "nil Hours, nil Minutes, nil Seconds (v1.0b)", textColor, 0.35, 22)
+local timer = createTextLabel("Timer", "0 Hours, 0 Minutes, 0 Seconds (v1.0b)", textColor, 0.35, 22)
 timer.Parent = textFrame
 local stats1 = createTextLabel("Stats1", "Level: ... | Gold: ...", statColor, 0.55, 18)
 stats1.Parent = textFrame
 local stats2 = createTextLabel("Stats2", "Gems: ... | Prestige: ...", statColor, 0.60, 18)
 stats2.Parent = textFrame
-local settings = createTextLabel("Settings", string.format("M: %s | D: %s", initialMap, initialDiff), textColor, 0.70, 18)
+local settings = createTextLabel("Settings", "M: N/A | D: N/A", textColor, 0.70, 18)
 settings.Parent = textFrame
 local shadowBan = createTextLabel("ShadowBan", "ShadowBan: Checking...", textColor, 0.75, 18)
 shadowBan.Parent = textFrame
@@ -167,6 +157,9 @@ end
 
 local currentLevel, currentPrestige, currentGold, currentGems = 0, 0, 0, 0
 local isShadowbanned = false
+local isRestartingMatch = false 
+local isLoadingServer = false 
+local isTeleporting = false
 
 local function updateStatsUI()
 	stats1.Text = string.format("Level: %d | Gold: %s", currentLevel, formatKMB(currentGold))
@@ -178,13 +171,75 @@ local function updateStatsUI()
 	end
 end
 
+----------------------------------------------------------------------
+-- LUỒNG CHÍNH (ĐẾM GIỜ -> CHECK LOADING -> ĐỢI 2S -> ĐỌC DATA)
+----------------------------------------------------------------------
 task.spawn(function()
 	if not game:IsLoaded() then game.Loaded:Wait() end
 	local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 	character:WaitForChild("HumanoidRootPart", 999)
+	
+	-- 1. BẮT ĐẦU ĐẾM GIỜ CHẠY NGẦM
+	local startTick = tick() 
+	
+	local heartbeatConnection = runService.Heartbeat:Connect(function()
+		if not timer or not timer.Parent then
+			heartbeatConnection:Disconnect()
+			return
+		end
+		
+		local elapsed = tick() - startTick
+		timer.Text = formatTimer(elapsed) .. " (v1.0b)"
+		
+		local currentMap = "N/A"
+		local currentDiff = "N/A"
+		
+		if isLobby then
+			currentMap = lobbyName 
+			currentDiff = "N/A"
+		else
+			if type(_G.TCFG) == "table" then
+				currentMap = _G.TCFG.AutoStartMap or "N/A"
+				currentDiff = _G.TCFG.AutoStartDifficulty or "N/A"
+			elseif getgenv and type(getgenv().TCFG) == "table" then
+				currentMap = getgenv().TCFG.AutoStartMap or "N/A"
+				currentDiff = getgenv().TCFG.AutoStartDifficulty or "N/A"
+			end
+			
+			-- Kiểm tra Auto Teleport
+			if MinuteReturnLobby > 0 and elapsed > (MinuteReturnLobby * 60) and not isTeleporting then
+				isTeleporting = true
+				task.spawn(function()
+					pcall(function() TeleportService:Teleport(mainLobbyId, LocalPlayer) end)
+					task.wait(10) 
+					isTeleporting = false
+				end)
+			end
+		end
+		
+		settings.Text = string.format("M: %s | D: %s", currentMap, currentDiff)
+
+		-- Chữ Status
+		if isTeleporting then
+			objective.Text = "Status: Teleporting..."
+		elseif isLoadingServer then
+			objective.Text = "Status: Waitting Server"
+		elseif isRestartingMatch then
+			objective.Text = "Status: ReStarting"
+		else
+			if isLobby then
+				objective.Text = "Status: Starting"
+			else
+				objective.Text = "Status: Attacking Titans"
+			end
+		end
+	end)
+
+	-- 2. ĐỢI UI
 	local Interface = LocalPlayer.PlayerGui:WaitForChild("Interface", 999)
 	if isLobby then Interface:WaitForChild("Gear_Up", 999) end
 
+	-- 3. CHECK HẾT MÀN HÌNH LOADING
 	local function checkIsLoading()
 		for _, v in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
 			if v:IsA("TextLabel") and v.Text and string.find(string.upper(v.Text), "LOADING") then
@@ -194,11 +249,15 @@ task.spawn(function()
 		return false 
 	end
 	
-	if checkIsLoading() and objective then objective.Text = "Status: Waitting Server" end
+	if checkIsLoading() then isLoadingServer = true end
 	while checkIsLoading() do task.wait(0.5) end
+	isLoadingServer = false 
 
+	-- 4. LUỒNG 1: ĐỢI 2S VÀ ĐỌC DATA Ở LOBBY
 	if isLobby then
+		-- ĐÚNG NHƯ BẠN YÊU CẦU: Khựng lại 2s trước khi quét UI
 		task.wait(2)
+		
 		local HUD = Interface:FindFirstChild("Gear_Up") and Interface.Gear_Up:FindFirstChild("HUD")
 		local LevelTitle = HUD and HUD:FindFirstChild("Level") and HUD.Level:FindFirstChild("Title")
 		currentLevel = LevelTitle and toNumber(LevelTitle.Text) or 0
@@ -223,12 +282,14 @@ task.spawn(function()
 
 		isShadowbanned = LocalPlayer:GetAttribute("Exploiter") and true or false
 
+		-- Lưu Log
 		if writefile then
 			local logData = { Level = currentLevel, Prestige = currentPrestige, Gold = currentGold, Gems = currentGems, Shadowbanned = isShadowbanned, Timestamp = os.date("%Y-%m-%d %H:%M:%S") }
 			pcall(function() writefile(tikiLogFile, HttpService:JSONEncode(logData)) end)
 			if isShadowbanned then pcall(function() writefile(LocalPlayer.Name .. ".txt", "Completed-Fennir On Top.") end) end
 		end
 	else
+		-- Móc Data cũ nếu đang đánh trận
 		if isfile and isfile(tikiLogFile) then
 			local success, content = pcall(function() return readfile(tikiLogFile) end)
 			if success and content then
@@ -246,6 +307,7 @@ task.spawn(function()
 
 	updateStatsUI()
 
+	-- 5. LUỒNG 2: KIỂM TRA BẢNG COMPLETED (Để chuyển Status qua ReStarting)
 	local cachedEndScreen = nil 
 	task.spawn(function()
 		while task.wait(1) do
@@ -269,60 +331,10 @@ task.spawn(function()
 			end
 		end
 	end)
-
-	local startTick = tick() 
-	local heartbeatConnection
-	local isTeleporting = false
-	
-	heartbeatConnection = runService.Heartbeat:Connect(function()
-		if not timer or not timer.Parent then
-			heartbeatConnection:Disconnect()
-			return
-		end
-		
-		local elapsed = tick() - startTick
-		timer.Text = formatTimer(elapsed) .. " (v1.0b)"
-		
-		local currentMap = "N/A"
-		local currentDiff = "N/A"
-		
-		if isLobby then
-			currentMap = lobbyName 
-			currentDiff = "N/A"
-			objective.Text = "Status: Starting"
-		else
-			if type(_G.TCFG) == "table" then
-				currentMap = _G.TCFG.AutoStartMap or "N/A"
-				currentDiff = _G.TCFG.AutoStartDifficulty or "N/A"
-			elseif getgenv and type(getgenv().TCFG) == "table" then
-				currentMap = getgenv().TCFG.AutoStartMap or "N/A"
-				currentDiff = getgenv().TCFG.AutoStartDifficulty or "N/A"
-			end
-			
-			if MinuteReturnLobby > 0 and elapsed > (MinuteReturnLobby * 60) and not isTeleporting then
-				isTeleporting = true
-				task.spawn(function()
-					pcall(function() TeleportService:Teleport(mainLobbyId, LocalPlayer) end)
-					task.wait(10) 
-					isTeleporting = false
-				end)
-			end
-			
-			if isTeleporting then
-				objective.Text = "Status: Teleporting..."
-			elseif isRestartingMatch then
-				objective.Text = "Status: ReStarting"
-			else
-				objective.Text = "Status: Attacking Titans"
-			end
-		end
-		
-		settings.Text = string.format("M: %s | D: %s", currentMap, currentDiff)
-	end)
 end)
 
 ----------------------------------------------------------------------
--- THÊM PHẦN LUARMOR KEY LOADER THEO YÊU CẦU
+-- THÊM PHẦN LUARMOR KEY LOADER 
 ----------------------------------------------------------------------
 local function k()
 	return table.concat({
