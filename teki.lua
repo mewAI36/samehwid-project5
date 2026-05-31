@@ -1,5 +1,5 @@
 -- ==========================================
--- SCRIPT TIKI HUB (MAIN SOURCE - FIX ZINDEX & SMART TIMER)
+-- SCRIPT TIKI HUB (MAIN SOURCE - FINAL FIX SMART TIMER)
 -- ==========================================
 
 ----------------------------------------------------------------------
@@ -19,7 +19,6 @@ local function k()
 end
 
 local function run(url)
-	-- BỌC TASK.SPAWN VÀO ĐÂY ĐỂ KHÔNG LÀM KẸT BẢNG UI Ở DƯỚI
 	task.spawn(function()
 		local env = getgenv()
 		env.script_key = k()
@@ -44,7 +43,7 @@ local MinuteReturnLobby = getgenv().Config.MinuteReturnLobby or 3
 local MethodReturn = getgenv().Config.MethodReturn or "Teleport" -- Chọn "Teleport" hoặc "Kick"
 
 ----------------------------------------------------------------------
--- 3. BẮT ĐẦU CHẠY CÁC CHỨC NĂNG CHÍNH CỦA UI
+-- 3. TẠO GIAO DIỆN UI
 ----------------------------------------------------------------------
 local Players = game:GetService("Players")
 local runService = game:GetService("RunService")
@@ -79,7 +78,7 @@ local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "TikiHubGUI"
 screenGui.ResetOnSpawn = false
 screenGui.DisplayOrder = 999999999 
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global -- Kích hoạt mode phân lớp Global
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global 
 screenGui.Enabled = EnableStatus
 screenGui.Parent = playerGui
 
@@ -91,9 +90,6 @@ textFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 textFrame.BackgroundTransparency = 1
 textFrame.Parent = screenGui
 
-----------------------------------------------------------------------
--- ĐIỀU CHỈNH NÚT TẮT BẬT (GÓC TRÁI DƯỚI CÙNG, TO HƠN, LỚP CAO NHẤT)
-----------------------------------------------------------------------
 local toggleBtn = Instance.new("ImageButton")
 toggleBtn.Name = "ToggleMenu"
 toggleBtn.Size = UDim2.new(0, 65, 0, 65) 
@@ -101,7 +97,7 @@ toggleBtn.Position = UDim2.new(0, 20, 1, -20)
 toggleBtn.AnchorPoint = Vector2.new(0, 1) 
 toggleBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 toggleBtn.Image = "rbxassetid://105244195609414" 
-toggleBtn.ZIndex = 999999 -- Nâng lớp lên cao nhất để không bao giờ bị đè
+toggleBtn.ZIndex = 999999 
 toggleBtn.Parent = screenGui
 
 local corner = Instance.new("UICorner")
@@ -202,8 +198,6 @@ end
 local currentLevel, currentPrestige, currentGold, currentGems = 0, 0, 0, 0
 local isShadowbanned = false
 local isRestartingMatch = false 
-local isLoadingServer = false 
-local isReturning = false
 
 local function updateStatsUI()
 	stats1.Text = string.format("Level: %d | Gold: %s", currentLevel, formatKMB(currentGold))
@@ -216,83 +210,17 @@ local function updateStatsUI()
 end
 
 ----------------------------------------------------------------------
--- LUỒNG CHÍNH (ĐẾM GIỜ -> CHECK LOADING -> ĐỢI 2S -> ĐỌC DATA)
+-- 4. LUỒNG CHÍNH (LOADING ĐÓNG BĂNG HỆ THỐNG)
 ----------------------------------------------------------------------
 task.spawn(function()
 	if not game:IsLoaded() then game.Loaded:Wait() end
 	local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 	character:WaitForChild("HumanoidRootPart", 999)
-	
-	-- 1. CHUẨN BỊ BỘ ĐẾM (Chưa chạy ngay, đợi hết Loading)
-	local startTick = nil 
-	
-	local heartbeatConnection = runService.Heartbeat:Connect(function()
-		if not timer or not timer.Parent then
-			heartbeatConnection:Disconnect()
-			return
-		end
-		
-		local elapsed = 0
-		if startTick then
-			elapsed = tick() - startTick
-			timer.Text = formatTimer(elapsed) .. " (v1.0b)"
-		else
-			timer.Text = "0 Hours, 0 Minutes, 0 Seconds (v1.0b)"
-		end
-		
-		local currentMap = "N/A"
-		local currentDiff = "N/A"
-		
-		if isLobby then
-			currentMap = lobbyName 
-			currentDiff = "N/A"
-		else
-			if type(_G.TCFG) == "table" then
-				currentMap = _G.TCFG.AutoStartMap or "N/A"
-				currentDiff = _G.TCFG.AutoStartDifficulty or "N/A"
-			elseif getgenv and type(getgenv().TCFG) == "table" then
-				currentMap = getgenv().TCFG.AutoStartMap or "N/A"
-				currentDiff = getgenv().TCFG.AutoStartDifficulty or "N/A"
-			end
-			
-			-- Chỉ kiểm tra Auto Return khi đồng hồ đã bắt đầu tính giờ
-			if startTick and MinuteReturnLobby > 0 and elapsed > (MinuteReturnLobby * 60) and not isReturning then
-				isReturning = true
-				task.spawn(function()
-					if MethodReturn == "Kick" then
-						LocalPlayer:Kick("Tiki Hub: Đã quá thời gian an toàn (" .. MinuteReturnLobby .. " phút). Tự động Kick để chống kẹt!")
-					else
-						pcall(function() TeleportService:Teleport(mainLobbyId, LocalPlayer) end)
-						task.wait(10) 
-						isReturning = false
-					end
-				end)
-			end
-		end
-		
-		settings.Text = string.format("M: %s | D: %s", currentMap, currentDiff)
 
-		-- Chữ Status
-		if isReturning then
-			objective.Text = MethodReturn == "Kick" and "Status: Kicking..." or "Status: Teleporting..."
-		elseif isLoadingServer then
-			objective.Text = "Status: Waitting Server"
-		elseif isRestartingMatch then
-			objective.Text = "Status: ReStarting"
-		else
-			if isLobby then
-				objective.Text = "Status: Starting"
-			else
-				objective.Text = "Status: Attacking Titans"
-			end
-		end
-	end)
-
-	-- 2. ĐỢI UI
 	local Interface = LocalPlayer.PlayerGui:WaitForChild("Interface", 999)
 	if isLobby then Interface:WaitForChild("Gear_Up", 999) end
 
-	-- 3. CHECK HẾT MÀN HÌNH LOADING
+	-- BƯỚC 4.1: KIỂM TRA CHỮ LOADING (ĐÓNG BĂNG)
 	local function checkIsLoading()
 		for _, v in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
 			if v:IsA("TextLabel") and v.Text and string.find(string.upper(v.Text), "LOADING") then
@@ -302,14 +230,16 @@ task.spawn(function()
 		return false 
 	end
 	
-	if checkIsLoading() then isLoadingServer = true end
-	while checkIsLoading() do task.wait(0.5) end
-	isLoadingServer = false 
+	if checkIsLoading() and objective then 
+		objective.Text = "Status: Waitting Server" 
+	end
 	
-	-- 4. BẮT ĐẦU ĐẾM GIỜ (SAU KHI LOADING HOÀN TOÀN BIẾN MẤT)
-	startTick = tick()
+	-- Khi nào Loading mất hẳn mới cho code chạy tiếp xuống dưới
+	while checkIsLoading() do 
+		task.wait(0.5) 
+	end
 
-	-- 5. LUỒNG 1: ĐỢI 2S VÀ ĐỌC DATA Ở LOBBY
+	-- BƯỚC 4.2: ĐỢI 2S VÀ ĐỌC DATA Ở LOBBY
 	if isLobby then
 		task.wait(2)
 		
@@ -337,14 +267,12 @@ task.spawn(function()
 
 		isShadowbanned = LocalPlayer:GetAttribute("Exploiter") and true or false
 
-		-- Lưu Log
 		if writefile then
 			local logData = { Level = currentLevel, Prestige = currentPrestige, Gold = currentGold, Gems = currentGems, Shadowbanned = isShadowbanned, Timestamp = os.date("%Y-%m-%d %H:%M:%S") }
 			pcall(function() writefile(tikiLogFile, HttpService:JSONEncode(logData)) end)
 			if isShadowbanned then pcall(function() writefile(LocalPlayer.Name .. ".txt", "Completed-Fennir On Top.") end) end
 		end
 	else
-		-- Móc Data cũ nếu đang đánh trận
 		if isfile and isfile(tikiLogFile) then
 			local success, content = pcall(function() return readfile(tikiLogFile) end)
 			if success and content then
@@ -362,9 +290,9 @@ task.spawn(function()
 
 	updateStatsUI()
 
-	-- 6. LUỒNG 2: KIỂM TRA BẢNG COMPLETED (Để chuyển Status qua ReStarting)
-	local cachedEndScreen = nil 
+	-- BƯỚC 4.3: QUÉT BẢNG MISSION COMPLETED
 	task.spawn(function()
+		local cachedEndScreen = nil 
 		while task.wait(1) do
 			if not screenGui or not screenGui.Parent then break end 
 			if not isLobby then
@@ -383,6 +311,66 @@ task.spawn(function()
 						if isActuallyVisible(cachedEndScreen) then isRestartingMatch = true end
 					end
 				end
+			end
+		end
+	end)
+
+	-- BƯỚC 4.4: BẮT ĐẦU ĐẾM GIỜ & CHECK RETURN
+	-- (Chỉ chạy tới đây khi chữ Loading đã bay màu hoàn toàn)
+	local startTick = tick() 
+	local isReturning = false
+	
+	local heartbeatConnection
+	heartbeatConnection = runService.Heartbeat:Connect(function()
+		if not timer or not timer.Parent then
+			heartbeatConnection:Disconnect()
+			return
+		end
+		
+		local elapsed = tick() - startTick
+		timer.Text = formatTimer(elapsed) .. " (v1.0b)"
+		
+		local currentMap = "N/A"
+		local currentDiff = "N/A"
+		
+		if isLobby then
+			currentMap = lobbyName 
+			currentDiff = "N/A"
+		else
+			if type(_G.TCFG) == "table" then
+				currentMap = _G.TCFG.AutoStartMap or "N/A"
+				currentDiff = _G.TCFG.AutoStartDifficulty or "N/A"
+			elseif getgenv and type(getgenv().TCFG) == "table" then
+				currentMap = getgenv().TCFG.AutoStartMap or "N/A"
+				currentDiff = getgenv().TCFG.AutoStartDifficulty or "N/A"
+			end
+			
+			-- Kiểm tra thời gian an toàn
+			if MinuteReturnLobby > 0 and elapsed > (MinuteReturnLobby * 60) and not isReturning then
+				isReturning = true
+				task.spawn(function()
+					if MethodReturn == "Kick" then
+						LocalPlayer:Kick("Tiki Hub: Đã quá thời gian an toàn (" .. MinuteReturnLobby .. " phút). Tự động Kick để chống kẹt!")
+					else
+						pcall(function() TeleportService:Teleport(mainLobbyId, LocalPlayer) end)
+						task.wait(10) 
+						isReturning = false
+					end
+				end)
+			end
+		end
+		
+		settings.Text = string.format("M: %s | D: %s", currentMap, currentDiff)
+
+		if isReturning then
+			objective.Text = MethodReturn == "Kick" and "Status: Kicking..." or "Status: Teleporting..."
+		elseif isRestartingMatch then
+			objective.Text = "Status: ReStarting"
+		else
+			if isLobby then
+				objective.Text = "Status: Starting"
+			else
+				objective.Text = "Status: Attacking Titans"
 			end
 		end
 	end)
