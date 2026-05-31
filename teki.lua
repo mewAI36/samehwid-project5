@@ -1,9 +1,9 @@
 -- ==========================================
--- SCRIPT TIKI HUB (MAIN SOURCE - KICK / TELEPORT METHOD)
+-- SCRIPT TIKI HUB (MAIN SOURCE - FIX UI NOT LOADING)
 -- ==========================================
 
 ----------------------------------------------------------------------
--- 1. CHẠY LUARMOR LOADER TRƯỚC TIÊN
+-- 1. CHẠY LUARMOR LOADER TRƯỚC TIÊN (CHẠY SONG SONG)
 ----------------------------------------------------------------------
 local function k()
 	return table.concat({
@@ -19,10 +19,13 @@ local function k()
 end
 
 local function run(url)
-	local env = getgenv()
-	env.script_key = k()
-	loadstring(game:HttpGet(url))()
-	env.script_key = nil
+	-- BỌC TASK.SPAWN VÀO ĐÂY ĐỂ KHÔNG LÀM KẸT BẢNG UI Ở DƯỚI
+	task.spawn(function()
+		local env = getgenv()
+		env.script_key = k()
+		loadstring(game:HttpGet(url))()
+		env.script_key = nil
+	end)
 end
 
 if getgenv().Version == "Premium" then
@@ -41,7 +44,7 @@ local MinuteReturnLobby = getgenv().Config.MinuteReturnLobby or 3
 local MethodReturn = getgenv().Config.MethodReturn or "Teleport" -- Chọn "Teleport" hoặc "Kick"
 
 ----------------------------------------------------------------------
--- 3. BẮT ĐẦU CHẠY CÁC CHỨC NĂNG CHÍNH
+-- 3. BẮT ĐẦU CHẠY CÁC CHỨC NĂNG CHÍNH CỦA UI
 ----------------------------------------------------------------------
 local Players = game:GetService("Players")
 local runService = game:GetService("RunService")
