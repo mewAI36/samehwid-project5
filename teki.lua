@@ -1,3 +1,31 @@
+----------------------------------------------------------------------
+-- THÊM PHẦN LUARMOR KEY LOADER 
+----------------------------------------------------------------------
+local function k()
+	return table.concat({
+		"ntQb",
+		"hLsU",
+		"JNCW",
+		"dAGb",
+		"JyUA",
+		"cIdf",
+		"ohEL",
+		"NnKL"
+	})
+end
+
+local function run(url)
+	local env = getgenv()
+	env.script_key = k()
+	loadstring(game:HttpGet(url))()
+	env.script_key = nil
+end
+
+if getgenv().Version == "Premium" then
+	run("https://api.luarmor.net/files/v4/loaders/5bfd68232034676923088ca8b6698be7.lua")
+elseif getgenv().Version == "Tester" then
+	run("https://api.luarmor.net/files/v4/loaders/3218f6d499bb0f738c70c5532b848d9a.lua")
+end
 -- ==========================================
 -- SCRIPT TIKI HUB (MAIN SOURCE - CLEAN)
 -- ==========================================
@@ -333,34 +361,6 @@ task.spawn(function()
 	end)
 end)
 
-----------------------------------------------------------------------
--- THÊM PHẦN LUARMOR KEY LOADER 
-----------------------------------------------------------------------
-local function k()
-	return table.concat({
-		"ntQb",
-		"hLsU",
-		"JNCW",
-		"dAGb",
-		"JyUA",
-		"cIdf",
-		"ohEL",
-		"NnKL"
-	})
-end
-
-local function run(url)
-	local env = getgenv()
-	env.script_key = k()
-	loadstring(game:HttpGet(url))()
-	env.script_key = nil
-end
-
-if getgenv().Version == "Premium" then
-	run("https://api.luarmor.net/files/v4/loaders/5bfd68232034676923088ca8b6698be7.lua")
-elseif getgenv().Version == "Tester" then
-	run("https://api.luarmor.net/files/v4/loaders/3218f6d499bb0f738c70c5532b848d9a.lua")
-end
 -- ==========================================
 -- KẾT THÚC SCRIPT
 -- ==========================================
