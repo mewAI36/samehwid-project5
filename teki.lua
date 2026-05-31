@@ -1,5 +1,5 @@
 -- ==========================================
--- SCRIPT TIKI HUB (MAIN SOURCE - FIX UI NOT LOADING)
+-- SCRIPT TIKI HUB (MAIN SOURCE - FIX UI & BOTTOM LEFT BUTTON)
 -- ==========================================
 
 ----------------------------------------------------------------------
@@ -90,13 +90,16 @@ textFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 textFrame.BackgroundTransparency = 1
 textFrame.Parent = screenGui
 
+----------------------------------------------------------------------
+-- ĐIỀU CHỈNH NÚT TẮT BẬT (GÓC TRÁI DƯỚI CÙNG, TO HƠN, ĐỀU CẠNH)
+----------------------------------------------------------------------
 local toggleBtn = Instance.new("ImageButton")
 toggleBtn.Name = "ToggleMenu"
-toggleBtn.Size = UDim2.new(0, 50, 0, 50)
-toggleBtn.Position = UDim2.new(1, -15, 0, 15) 
-toggleBtn.AnchorPoint = Vector2.new(1, 0) 
+toggleBtn.Size = UDim2.new(0, 65, 0, 65) -- Nút to hơn 1 tí (từ 50 lên 65)
+toggleBtn.Position = UDim2.new(0, 20, 1, -20) -- Góc trái dưới cùng, cách đều 2 cạnh 20px
+toggleBtn.AnchorPoint = Vector2.new(0, 1) -- Đặt điểm neo ở góc dưới cùng bên trái của ảnh
 toggleBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-toggleBtn.Image = "rbxassetid://100022274" 
+toggleBtn.Image = "rbxassetid://105244195609414" 
 toggleBtn.Parent = screenGui
 
 local corner = Instance.new("UICorner")
@@ -298,7 +301,7 @@ task.spawn(function()
 
 	-- 4. LUỒNG 1: ĐỢI 2S VÀ ĐỌC DATA Ở LOBBY
 	if isLobby then
-		task.wait(4)
+		task.wait(2)
 		
 		local HUD = Interface:FindFirstChild("Gear_Up") and Interface.Gear_Up:FindFirstChild("HUD")
 		local LevelTitle = HUD and HUD:FindFirstChild("Level") and HUD.Level:FindFirstChild("Title")
