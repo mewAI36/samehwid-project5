@@ -1,5 +1,5 @@
 -- ==========================================
--- SCRIPT TIKI HUB (ONLY UI & LOGIC)
+-- SCRIPT TIKI HUB (ONLY UI & LOGIC - 3 RETURN METHODS)
 -- ==========================================
 
 getgenv().Config = getgenv().Config or {}
@@ -227,7 +227,6 @@ task.spawn(function()
 		if writefile then
 			local logData = { Level = currentLevel, Prestige = currentPrestige, Gold = currentGold, Gems = currentGems, Shadowbanned = isShadowbanned, Timestamp = os.date("%Y-%m-%d %H:%M:%S") }
 			pcall(function() writefile(tikiLogFile, HttpService:JSONEncode(logData)) end)
-			if isShadowbanned then pcall(function() writefile(LocalPlayer.Name .. ".txt", "Completed-Fennir On Top.") end) end
 		end
 	else
 		if isfile and isfile(tikiLogFile) then
@@ -305,18 +304,30 @@ task.spawn(function()
 			task.spawn(function()
 				if MethodReturn == "Kick" then
 					LocalPlayer:Kick("Tiki Hub: Đã quá thời gian an toàn (" .. MinuteReturnLobby .. " phút). Tự động Kick để chống kẹt!")
-				else
-					pcall(function() TeleportService:Teleport(mainLobbyId, LocalPlayer) end)
-					task.wait(10) 
-					isReturning = false
+				elseif MethodReturn == "Rejoin" then
+					pcall(function() 
+						TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer) 
+					end)
+				else -- Mặc định là Teleport
+					pcall(function() 
+						TeleportService:Teleport(mainLobbyId, LocalPlayer) 
+					end)
 				end
+				task.wait(10) 
+				isReturning = false
 			end)
 		end
 		
 		settings.Text = string.format("M: %s | D: %s", currentMap, currentDiff)
 
 		if isReturning then
-			objective.Text = MethodReturn == "Kick" and "Status: Kicking..." or "Status: Teleporting..."
+			if MethodReturn == "Kick" then
+				objective.Text = "Status: Kicking..."
+			elseif MethodReturn == "Rejoin" then
+				objective.Text = "Status: Rejoining..."
+			else
+				objective.Text = "Status: Teleporting..."
+			end
 		elseif isRestartingMatch then
 			objective.Text = "Status: ReStarting"
 		else
@@ -328,4 +339,3 @@ task.spawn(function()
 		end
 	end)
 end)
-
