@@ -198,7 +198,7 @@ task.spawn(function()
 	end
 
 	if isLobby then
-		task.wait(5)
+		task.wait(10)
 		
 		local HUD = Interface:FindFirstChild("Gear_Up") and Interface.Gear_Up:FindFirstChild("HUD")
 		local LevelTitle = HUD and HUD:FindFirstChild("Level") and HUD.Level:FindFirstChild("Title")
